@@ -1,0 +1,50 @@
+[
+  {
+    "id": "team-vitality-rank1",
+    "rank": 1,
+    "teamName": "Vitality",
+    "points": 1000,
+    "logoName": "logo_vitality", 
+    "rankChange": 0,
+    "lastUpdated": "2025-05-19T10:00:00Z",
+    "players": [
+      { "id": "8dbb7592-ff78-4743-9a4a-6545be5f0cc1", "playerName": "apEX", "countryCode": "FR" },
+      { "id": "42e27123-c058-4f24-9c63-7c42917b8f24", "playerName": "ropz", "countryCode": "EE" },
+      { "id": "b818e17b-3f0d-4e4a-ac5b-76024416c1e6", "playerName": "ZywOo", "countryCode": "FR" },
+      { "id": "6e04d9cb-eb9e-446c-9673-49c39daeb428", "playerName": "flameZ", "countryCode": "IL" },
+      { "id": "8b8ab297-1351-45d4-8f0f-fde97fde4b0c", "playerName": "mezii", "countryCode": "GB" }
+    ]
+  },
+  {
+    "id": "team-spirit-rank2",
+    "rank": 2,
+    "teamName": "Spirit",
+    "points": 655,
+    "logoName": "logo_spirit",
+    "rankChange": 1,
+    "lastUpdated": "2025-05-19T10:00:00Z",
+    "players": [
+      { "id": "caff38eb-8e5d-4a49-aef7-ab30e13c471c", "playerName": "chopper", "countryCode": "RU" },
+      { "id": "23ce3c17-7d3f-4e6e-929b-c945f1887bf2", "playerName": "sh1ro", "countryCode": "RU" },
+      { "id": "004e84b8-e5da-4781-a195-7cee3f91c3e2", "playerName": "magixx", "countryCode": "RU" },
+      { "id": "773b7a45-abff-4c70-a46f-f2d8b249d6c1", "playerName": "zont1x", "countryCode": "UA" },
+      { "id": "be82a724-03fe-46e4-b6af-3db181a6b2b5", "playerName": "donk", "countryCode": "RU" }
+    ]
+  },
+  {
+    "id": "team-mouz-rank3",
+    "rank": 3,
+    "teamName": "MOUZ",
+    "points": 567,
+    "logoName": "logo_mouz",
+    "rankChange": -1,
+    "lastUpdated": "2025-05-19T10:00:00Z",
+    "players": [
+      { "id": "243fe353-9566-46bd-b38c-56d40f0c6fd4", "playerName": "Brollan", "countryCode": "SE" },
+      { "id": "5deae26e-5488-44bd-b1c5-228ad429778c", "playerName": "torzsi", "countryCode": "HU" },
+      { "id": "b319fc61-574e-4bba-993e-3e5a3fae8ea1", "playerName": "Spinx", "countryCode": "IL" },
+      { "id": "43cd5581-e170-4043-867b-0a5543d7dfc9", "playerName": "Jimpphat", "countryCode": "FI" },
+      { "id": "a6500fe9-995f-4f9e-8905-ad53cbad891f", "playerName": "xertioN", "countryCode": "IL" }
+    ]
+  }
+]

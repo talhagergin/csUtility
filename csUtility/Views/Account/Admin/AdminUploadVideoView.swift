@@ -1,29 +1,34 @@
+// Views/Account/Admin/AdminUploadVideoView.swift
 import SwiftUI
 import SwiftData
 
 struct AdminUploadVideoView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject var accountViewModel: AccountViewModel // Admin kontrolü için
+    @EnvironmentObject var accountViewModel: AccountViewModel
 
     @State private var title: String = ""
     @State private var youtubeURL: String = ""
     @State private var selectedMap: CSMap
     @State private var selectedUtility: UtilityType
-    
+    @State private var selectedCategory: LineupCategory = .general // YENİ: Kategori seçimi için state
+
     @State private var showAlert = false
     @State private var alertMessage = ""
 
-    let onUploadComplete: () -> Void // Yükleme tamamlandığında çağrılacak closure
+    let onUploadComplete: () -> Void
 
     init(map: CSMap, utilityType: UtilityType, onUploadComplete: @escaping () -> Void) {
         _selectedMap = State(initialValue: map)
         _selectedUtility = State(initialValue: utilityType)
+        // Varsayılan olarak ilk haritanın veya utility'nin kategorisini seçebilirsiniz (daha sonra)
+        // Şimdilik .general ile başlıyoruz.
+        _selectedCategory = State(initialValue: .general)
         self.onUploadComplete = onUploadComplete
     }
 
     var body: some View {
-        NavigationView { // .toolbar kullanımı için NavigationView veya NavigationStack içinde olmalı
+        NavigationView {
             Form {
                 Section(header: Text("Video Detayları")) {
                     TextField("Video Başlığı", text: $title)
@@ -41,6 +46,12 @@ struct AdminUploadVideoView: View {
                     Picker("Utility Tipi Seç", selection: $selectedUtility) {
                         ForEach(UtilityType.allCases) { utility in
                             Text(utility.rawValue).tag(utility)
+                        }
+                    }
+                    // YENİ: Kategori Seçimi Picker'ı
+                    Picker("Kategori Seç", selection: $selectedCategory) {
+                        ForEach(LineupCategory.allCases) { category in
+                            Text(category.displayName).tag(category)
                         }
                     }
                 }
@@ -66,11 +77,8 @@ struct AdminUploadVideoView: View {
             }
             .onAppear {
                 guard accountViewModel.isAdmin else {
-                    // Eğer admin değilse, bu ekrana erişimi engelle veya uyarı göster.
-                    // Pratikte bu view'a yönlendirme admin kontrolü ile yapılmalı.
                     alertMessage = "Bu alanı görüntüleme yetkiniz yok."
                     showAlert = true
-                    // dismiss() // hemen kapatmak için
                     return
                 }
             }
@@ -95,8 +103,9 @@ struct AdminUploadVideoView: View {
             youtubeURL: youtubeURL,
             mapName: selectedMap.rawValue,
             utilityType: selectedUtility,
+            category: selectedCategory.rawValue, // YENİ: Kategori bilgisini kaydet
             uploadedDate: Date(),
-            uploaderID: accountViewModel.loggedInUser?.username // Veya ID
+            uploaderID: accountViewModel.loggedInUser?.username
         )
 
         modelContext.insert(newVideo)
@@ -104,8 +113,7 @@ struct AdminUploadVideoView: View {
         do {
             try modelContext.save()
             alertMessage = "Video başarıyla eklendi!"
-            onUploadComplete() // Liste yenileme için callback çağır
-            // dismiss() // Alert gösterdikten sonra kapatmak daha iyi
+            onUploadComplete()
         } catch {
             alertMessage = "Video kaydedilirken hata oluştu: \(error.localizedDescription)"
         }

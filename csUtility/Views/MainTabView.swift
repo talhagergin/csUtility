@@ -12,13 +12,19 @@ struct MainTabView: View {
     
     var body: some View {
         TabView {
+            
             NavigationStack {
                 MapsListView(viewModel: MapsViewModel())
             }
             .tabItem {
                 Label("Haritalar", systemImage: "map.fill")
             }
-
+            
+            RankingsListView()
+                .tabItem {
+                    Label("Sıralama", systemImage: "list.star")
+                    
+                }
             NavigationStack {
                 NewsListView(modelContext: modelContext) // Veya kendi ViewModel'i
             }

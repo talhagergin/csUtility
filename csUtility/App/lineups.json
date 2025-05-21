@@ -1,0 +1,72 @@
+[
+  {
+    "id": "dust2-longa-smoke-001",
+    "title": "Dust II - Long A Smoke (T Spawn Köşe)",
+    "youtubeURL": "https://www.youtube.com/watch?v=VIDEO_ID_DUST2_SMOKE1",
+    "mapName": "Dust II",
+    "utilityTypeRawValue": "Smoke",
+    "category": "Long A",
+    "uploadedDate": "2024-03-10T10:00:00Z",
+    "uploaderID": "app_seed_admin"
+  },
+  {
+    "id": "dust2-midcross-smoke-002",
+    "title": "Dust II - Mid Cross Smoke (T Spawn)",
+    "youtubeURL": "https://www.youtube.com/watch?v=VIDEO_ID_DUST2_SMOKE2",
+    "mapName": "Dust II",
+    "utilityTypeRawValue": "Smoke",
+    "category": "Mid",
+    "uploadedDate": "2024-03-10T10:05:00Z",
+    "uploaderID": "app_seed_admin"
+  },
+  {
+    "id": "mirage-window-smoke-001",
+    "title": "Mirage - Window Smoke (T Spawn Merdiven Altı)",
+    "youtubeURL": "https://www.youtube.com/watch?v=VIDEO_ID_MIRAGE_SMOKE1",
+    "mapName": "Mirage",
+    "utilityTypeRawValue": "Smoke",
+    "category": "Window",
+    "uploadedDate": "2024-03-09T14:20:00Z",
+    "uploaderID": "app_seed_admin"
+  },
+  {
+    "id": "mirage-connector-molo-002",
+    "title": "Mirage - Connector Molotov (A Ramp)",
+    "youtubeURL": "https://www.youtube.com/watch?v=VIDEO_ID_MIRAGE_MOLO1",
+    "mapName": "Mirage",
+    "utilityTypeRawValue": "Molotov",
+    "category": "Connector",
+    "uploadedDate": "2024-03-09T14:25:00Z",
+    "uploaderID": "app_seed_admin"
+  },
+  {
+    "id": "inferno-banana-smoke-001",
+    "title": "Inferno - Banana Derin Smoke (T Spawn Duvar)",
+    "youtubeURL": "https://www.youtube.com/watch?v=VIDEO_ID_INFERNO_SMOKE1",
+    "mapName": "Inferno",
+    "utilityTypeRawValue": "Smoke",
+    "category": "Banana",
+    "uploadedDate": "2024-03-08T18:00:00Z",
+    "uploaderID": "app_seed_admin"
+  },
+  {
+    "id": "inferno-aps-flash-002",
+    "title": "Inferno - Aps Flash (Tek Yönlü)",
+    "youtubeURL": "https://www.youtube.com/watch?v=VIDEO_ID_INFERNO_FLASH1",
+    "mapName": "Inferno",
+    "utilityTypeRawValue": "Flashbang",
+    "category": "A Site",
+    "uploadedDate": "2024-03-08T18:05:00Z",
+    "uploaderID": "app_seed_admin"
+  },
+  {
+    "id": "nuke-secret-smoke-001",
+    "title": "Nuke - Secret Smoke (Dışarıdan)",
+    "youtubeURL": "https://www.youtube.com/watch?v=VIDEO_ID_NUKE_SMOKE1",
+    "mapName": "Nuke",
+    "utilityTypeRawValue": "Smoke",
+    "category": "A Site",
+    "uploadedDate": "2024-03-07T09:00:00Z",
+    "uploaderID": "app_seed_admin"
+  }
+]

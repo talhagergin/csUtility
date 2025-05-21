@@ -4,7 +4,7 @@ enum CSMap: String, CaseIterable, Identifiable {
     case dust2 = "Dust II"
     case mirage = "Mirage"
     case inferno = "Inferno"
-    case overpass = "Overpass"
+    case train = "Train"
     case nuke = "Nuke"
     case vertigo = "Vertigo"
     case ancient = "Ancient"
@@ -13,8 +13,12 @@ enum CSMap: String, CaseIterable, Identifiable {
     var id: String { self.rawValue }
     var imageName: String {
         switch self {
-        case .dust2: return "map_dust2_image" // Assets'e eklenecek resim adı
-        case .mirage: return "map_mirage_image"
+        case .dust2: return "dust2cs2" // Assets'e eklenecek resim adı
+        case .mirage: return "miragecs2"
+        case .inferno: return "infernocs2"
+        case .nuke: return "nukecs2"
+        case .ancient: return "ancientcs2"
+        case .train: return "traincs2"
         // ... Diğer haritalar
         default: return "map_placeholder_image"
         }

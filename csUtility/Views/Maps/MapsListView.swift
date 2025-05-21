@@ -22,7 +22,7 @@ struct MapsListView: View {
         }
     }
 }
-
+/*
 struct MapItemView: View {
     let map: CSMap
 
@@ -42,3 +42,4 @@ struct MapItemView: View {
         .cornerRadius(12)
     }
 }
+*/

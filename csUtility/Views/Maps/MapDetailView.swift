@@ -22,7 +22,7 @@ struct MapDetailView: View {
         .navigationDestination(for: UtilitySelection.self) { selection in
             // Düzeltilmiş ViewModel adı: LineupVideosViewModel
             LineupVideosListView(
-                viewModel: LineupVideosViewModel( // Burası LineupVideosListViewModel DEĞİL, LineupVideosViewModel olacak
+                viewModel: LineupVideoViewModel( // Burası LineupVideosListViewModel DEĞİL, LineupVideosViewModel olacak
                     modelContext: modelContext,
                     map: selection.map,
                     utility: selection.utility

@@ -1,5 +1,6 @@
+// AppModelContainer.swift
 import SwiftData
-import Foundation // Belki UUID vs. için, ama burada doğrudan gerekmeyebilir.
+import Foundation
 
 public actor AppModelContainer {
     @MainActor
@@ -7,27 +8,40 @@ public actor AppModelContainer {
         let schema = Schema([
             LineupVideo.self,
             User.self,
-            NewsItem.self
+            NewsItem.self,
+            TeamRanking.self // TeamRanking modelini eklemiştik
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
         do {
             let container = try ModelContainer(for: schema, configurations: [modelConfiguration])
-            
-            // iOS 17+ için #Predicate kullanımı
-            // Örnek admin kullanıcısı ekleme (ilk çalıştırmada)
-            // Gerçek uygulamada bu daha kontrollü yapılmalı
-            let descriptor = FetchDescriptor<User>(predicate: #Predicate { $0.username == "admin" }) // BU SATIRDA HATA ALIYORSANIZ
-            
-            // iOS 16 ve öncesi için (Eğer eski sürümü desteklemeniz gerekiyorsa)
-            // let predicate = NSPredicate(format: "username == %@", "admin")
-            // let descriptor = FetchDescriptor<User>(predicate: predicate)
+            let context = container.mainContext // ModelContext'i al
 
-            if try container.mainContext.fetchCount(descriptor) == 0 {
-                let adminUser = User(username: "admin", hashedPassword: "adminpassword", isAdmin: true) // Güvenli hash kullanın!
-                container.mainContext.insert(adminUser)
-                try? container.mainContext.save()
-                print("Admin user created.")
+            // 1. Başlangıç Admin Kullanıcısını Oluştur (Eğer yoksa)
+            let adminDescriptor = FetchDescriptor<User>(predicate: #Predicate { $0.username == "admin" })
+            if try context.fetchCount(adminDescriptor) == 0 {
+                let adminUser = User(username: "admin", hashedPassword: "adminpassword", isAdmin: true)
+                context.insert(adminUser)
+                print("Admin user 'admin' will be created if it doesn't exist.")
+            }
+
+            // 2. DİĞER BAŞLANGIÇ VERİLERİNİ YÜKLE (JSON'dan)
+            // seedInitialData fonksiyonu burada çağrılıyor.
+            // Bu fonksiyon hem lineup'ları hem de takım sıralamalarını yükleyecek.
+            seedInitialData(modelContext: context)
+
+            // 3. Yapılan tüm değişiklikleri kaydet
+            if context.hasChanges {
+                do {
+                    try context.save()
+                    print("Successfully saved changes to ModelContainer (admin/seed data).")
+                } catch {
+                    print("ERROR: Could not save initial data to ModelContainer: \(error.localizedDescription)")
+                    // Geliştirme sırasında bu hatayı görmek önemlidir.
+                    // Production'da daha nazik bir hata yönetimi gerekebilir.
+                }
+            } else {
+                print("No changes to save in ModelContainer after initial setup (admin exists, data already seeded).")
             }
             
             return container
@@ -35,4 +49,10 @@ public actor AppModelContainer {
             fatalError("Could not create ModelContainer: \(error)")
         }
     }()
+    
+    // seedInitialData, loadLineupsFromJSON, loadRankingsFromJSON fonksiyonları
+    // ya ayrı bir dosyada (DataSeeder.swift gibi) ya da bu dosyanın içinde
+    // AppModelContainer actor'ının DIŞINDA tanımlanmalıdır.
+    // @MainActor ile işaretlendikleri için ModelContainer'ın @MainActor
+    // static 'shared' özelliği içinden çağrılabilirler.
 }
