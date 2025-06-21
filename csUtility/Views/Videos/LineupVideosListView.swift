@@ -124,6 +124,9 @@ struct LineupVideosListView: View {
             }
         }
         .navigationTitle("\(viewModel.selectedMap.displayName) - \(viewModel.selectedUtility.rawValue)")
+        .navigationDestination(for: LineupVideo.self) { video in
+            VideoPlayerView(video: video)
+        }
         .toolbar {
             if accountViewModel.isAdmin {
                 ToolbarItem(placement: .navigationBarTrailing) {

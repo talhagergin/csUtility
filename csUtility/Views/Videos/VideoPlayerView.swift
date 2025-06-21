@@ -12,13 +12,6 @@ struct VideoPlayerView: View {
     @StateObject private var playerViewModel: VideoPlayerViewModel
     @Environment(\.modelContext) private var modelContext
     @StateObject private var settingsViewModel = SettingsViewModel()
-    
-    // YouTubeService'i normal instance olarak oluştur
-    private let youtubeService = YouTubeService()
-    
-    @State private var showingYouTubeOptions = false
-    @State private var showingErrorAlert = false
-    @State private var errorMessage = ""
 
     init(video: LineupVideo) {
         self.video = video
@@ -45,72 +38,42 @@ struct VideoPlayerView: View {
                 .font(.title2)
                 .padding()
 
-            // Video seçenekleri
-            VStack(spacing: 12) {
-                if video.localVideoPath == nil || video.localVideoPath!.isEmpty {
-                    if playerViewModel.isDownloading {
-                        ProgressView("İndiriliyor: \(Int(playerViewModel.downloadProgress * 100))%")
-                    } else {
-                        // YouTube'da açma butonu (her zaman mevcut)
-                        Button {
-                            openInYouTube()
-                        } label: {
-                            Label("YouTube'da Aç", systemImage: "play.rectangle.fill")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .padding(.horizontal)
-                        
-                        // İndirme butonu (sadece ayarlar açıksa)
-                        if settingsViewModel.isVideoDownloadEnabled {
-                            Button {
-                                Task {
-                                    await playerViewModel.downloadVideo(context: modelContext)
-                                }
-                            } label: {
-                                Label("Videoyu İndir", systemImage: "arrow.down.circle.fill")
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.bordered)
-                            .padding(.horizontal)
-                            .disabled(playerViewModel.extractYouTubeVideoID(from: video.youtubeURL) == nil)
-                        } else {
-                            VStack(spacing: 4) {
-                                Text("Video İndirme Devre Dışı")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                                Text("İndirme özelliğini ayarlardan aktif edebilirsiniz")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding()
-                        }
-                    }
+            if video.localVideoPath == nil || video.localVideoPath!.isEmpty {
+                if playerViewModel.isDownloading {
+                    ProgressView("İndiriliyor: \(Int(playerViewModel.downloadProgress * 100))%")
                 } else {
-                    Text("Video İndirilmiş")
-                        .foregroundColor(.green)
-                        .font(.headline)
-                    
-                    HStack(spacing: 12) {
+                    if settingsViewModel.isVideoDownloadEnabled {
                         Button {
-                            openInYouTube()
+                            Task {
+                                await playerViewModel.downloadVideo(context: modelContext)
+                            }
                         } label: {
-                            Label("YouTube'da Aç", systemImage: "play.rectangle.fill")
-                                .frame(maxWidth: .infinity)
+                            Label("Videoyu İndir", systemImage: "arrow.down.circle.fill")
                         }
-                        .buttonStyle(.borderedProminent)
-                        
-                        Button {
-                           playerViewModel.deleteDownloadedVideo(context: modelContext)
-                        } label: {
-                            Label("Sil", systemImage: "trash.fill")
-                                .frame(maxWidth: .infinity)
+                        .padding()
+                        .disabled(playerViewModel.extractYouTubeVideoID(from: video.youtubeURL) == nil)
+                    } else {
+                        VStack(spacing: 8) {
+                            Text("Video İndirme Devre Dışı")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                            Text("İndirme özelliğini ayarlardan aktif edebilirsiniz")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
                         }
-                        .buttonStyle(.bordered)
-                        .foregroundColor(.red)
+                        .padding()
                     }
-                    .padding(.horizontal)
                 }
+            } else {
+                Text("Video İndirilmiş")
+                    .foregroundColor(.green)
+                Button {
+                   playerViewModel.deleteDownloadedVideo(context: modelContext)
+                } label: {
+                    Label("İndirilen Videoyu Sil", systemImage: "trash.fill")
+                        .foregroundColor(.red)
+                }
+                .padding()
             }
             
             if let downloadError = playerViewModel.downloadError {
@@ -122,11 +85,6 @@ struct VideoPlayerView: View {
             Spacer()
         }
         .navigationTitle("Lineup")
-        .alert("Hata", isPresented: $showingErrorAlert) {
-            Button("Tamam", role: .cancel) { }
-        } message: {
-            Text(errorMessage)
-        }
         .onAppear {
             print("🔍 DEBUG: VideoPlayerView onAppear")
             print("🔍 DEBUG: video.localVideoPath: \(video.localVideoPath ?? "nil")")
@@ -143,28 +101,6 @@ struct VideoPlayerView: View {
             playerViewModel.checkLocalVideoStatus()
             print("🔍 DEBUG: checkLocalVideoStatus çağrıldı")
             print("🔍 DEBUG: playerViewModel.canPlayLocalVideo: \(playerViewModel.canPlayLocalVideo)")
-        }
-    }
-    
-    private func openInYouTube() {
-        guard let videoID = playerViewModel.extractYouTubeVideoID(from: video.youtubeURL) else {
-            errorMessage = "Geçersiz YouTube URL'si"
-            showingErrorAlert = true
-            return
-        }
-        
-        // Önce YouTube uygulamasında açmayı dene
-        if let youtubeAppURL = youtubeService.createYouTubeAppURL(videoID: videoID),
-           UIApplication.shared.canOpenURL(youtubeAppURL) {
-            UIApplication.shared.open(youtubeAppURL)
-        } else {
-            // YouTube uygulaması yoksa web'de aç
-            if let youtubeWebURL = youtubeService.createYouTubeURL(videoID: videoID) {
-                UIApplication.shared.open(youtubeWebURL)
-            } else {
-                errorMessage = "YouTube'da açılamadı"
-                showingErrorAlert = true
-            }
         }
     }
 }
