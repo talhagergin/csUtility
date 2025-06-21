@@ -19,7 +19,7 @@ struct VideoPlayerView: View {
     
     var body: some View {
         VStack {
-            if let localPath = video.localVideoPath, !localPath.isEmpty, playerViewModel.canPlayLocalVideo {
+            if let localPath = video.localVideoPath, !localPath.isEmpty {
                 // AVPlayer ile lokal video oynatma
                 LocalVideoPlayerView(videoPath: localPath)
                     .frame(minHeight: 200, idealHeight: 300)
@@ -73,7 +73,11 @@ struct VideoPlayerView: View {
         }
         .navigationTitle("Lineup")
         .onAppear {
+            print("🔍 DEBUG: VideoPlayerView onAppear")
+            print("🔍 DEBUG: video.localVideoPath: \(video.localVideoPath ?? "nil")")
             playerViewModel.checkLocalVideoStatus()
+            print("🔍 DEBUG: checkLocalVideoStatus çağrıldı")
+            print("🔍 DEBUG: playerViewModel.canPlayLocalVideo: \(playerViewModel.canPlayLocalVideo)")
         }
     }
 }
@@ -86,12 +90,16 @@ struct LocalVideoPlayerView: UIViewRepresentable {
         let view = UIView()
         view.backgroundColor = .black
         
+        print("🔍 DEBUG: LocalVideoPlayerView makeUIView")
+        print("🔍 DEBUG: videoPath: \(videoPath)")
+        
         // Dosya path'ini URL'e çevir
         let fileURL = URL(fileURLWithPath: videoPath)
+        print("🔍 DEBUG: fileURL: \(fileURL)")
         
         // Dosyanın var olup olmadığını kontrol et
         guard FileManager.default.fileExists(atPath: videoPath) else {
-            print("Video dosyası bulunamadı: \(videoPath)")
+            print("❌ DEBUG: Video dosyası bulunamadı: \(videoPath)")
             let errorLabel = UILabel()
             errorLabel.text = "Video dosyası bulunamadı"
             errorLabel.textColor = .white
@@ -100,6 +108,17 @@ struct LocalVideoPlayerView: UIViewRepresentable {
             errorLabel.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             view.addSubview(errorLabel)
             return view
+        }
+        
+        print("🔍 DEBUG: Video dosyası bulundu")
+        
+        // Dosya boyutunu kontrol et
+        do {
+            let attributes = try FileManager.default.attributesOfItem(atPath: videoPath)
+            let fileSize = attributes[.size] as? Int64 ?? 0
+            print("🔍 DEBUG: Dosya boyutu: \(fileSize) bytes")
+        } catch {
+            print("❌ DEBUG: Dosya özellikleri alınamadı: \(error)")
         }
         
         // Demo video dosyası kontrolü

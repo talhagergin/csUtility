@@ -45,60 +45,46 @@ class VideoPlayerViewModel: ObservableObject {
         downloadError = nil
         downloadProgress = 0.0
 
-        do {
-            // Gerçek video indirme işlemi
-            let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-            let videosFolder = documentsPath.appendingPathComponent("DownloadedVideos")
-            
-            // Videos klasörünü oluştur
-            try FileManager.default.createDirectory(at: videosFolder, withIntermediateDirectories: true, attributes: nil)
-            
-            let fileName = "\(video.id.uuidString).mp4"
-            let localFileURL = videosFolder.appendingPathComponent(fileName)
-            
-            // Eğer dosya zaten varsa, sil
-            if FileManager.default.fileExists(atPath: localFileURL.path) {
-                try FileManager.default.removeItem(at: localFileURL)
+        // VideoDownloadService kullanarak gerçek video indirme
+        downloadService.downloadVideo(
+            youtubeURL: video.youtubeURL,
+            progressHandler: { progress in
+                Task { @MainActor in
+                    self.downloadProgress = progress
+                }
+            },
+            completion: { result in
+                Task { @MainActor in
+                    switch result {
+                    case .success(let localURL):
+                        print("🔍 DEBUG: Video indirme başarılı")
+                        print("🔍 DEBUG: localURL: \(localURL)")
+                        print("🔍 DEBUG: localURL.path: \(localURL.path)")
+                        
+                        // Video path'ini kaydet
+                        self.video.localVideoPath = localURL.path
+                        print("🔍 DEBUG: video.localVideoPath ayarlandı: \(self.video.localVideoPath ?? "nil")")
+                        
+                        do {
+                            try context.save()
+                            print("🔍 DEBUG: Context kaydedildi")
+                            self.checkLocalVideoStatus()
+                            print("🔍 DEBUG: checkLocalVideoStatus çağrıldı")
+                            print("🔍 DEBUG: canPlayLocalVideo: \(self.canPlayLocalVideo)")
+                            print("Video download complete. Path: \(self.video.localVideoPath ?? "N/A")")
+                        } catch {
+                            print("❌ DEBUG: Context kaydetme hatası: \(error)")
+                            self.downloadError = "Video kaydetme hatası: \(error.localizedDescription)"
+                        }
+                    case .failure(let error):
+                        print("❌ DEBUG: Video indirme hatası: \(error)")
+                        self.downloadError = "Video indirme hatası: \(error.localizedDescription)"
+                        print("Download error: \(error)")
+                    }
+                    self.isDownloading = false
+                }
             }
-            
-            // YouTube video indirme (demo amaçlı)
-            // Not: Gerçek YouTube video indirme için özel API'ler veya yt-dlp gibi kütüphaneler gerekiyor
-            // Şimdilik demo amaçlı basit bir video dosyası oluşturuyoruz
-            
-            // Progress simülasyonu
-            for i in 1...10 {
-                try await Task.sleep(nanoseconds: 200_000_000)
-                self.downloadProgress = Double(i) / 10.0
-            }
-            
-            // Demo amaçlı basit bir video dosyası oluştur
-            // Bu kısım gerçek uygulamada YouTube video indirme API'si ile değiştirilmeli
-            let demoVideoContent = """
-            Demo video content for: \(video.title)
-            Video ID: \(videoID)
-            Map: \(video.mapName)
-            Utility: \(video.utilityTypeRawValue)
-            Category: \(video.category ?? "N/A")
-            Upload Date: \(video.uploadedDate)
-            
-            Bu bir demo video dosyasıdır. Gerçek uygulamada bu kısım YouTube video indirme API'si ile değiştirilecektir.
-            """
-            let demoVideoData = Data(demoVideoContent.utf8)
-            try demoVideoData.write(to: localFileURL)
-            
-            // Video path'ini kaydet
-            video.localVideoPath = localFileURL.path
-            try context.save()
-            checkLocalVideoStatus()
-            
-            print("Demo video download complete. Path: \(video.localVideoPath ?? "N/A")")
-            
-        } catch {
-            downloadError = "Video indirme hatası: \(error.localizedDescription)"
-            print("Download error: \(error)")
-        }
-        
-        isDownloading = false
+        )
     }
     
     // YouTube video bilgilerini almak için (opsiyonel)
@@ -126,16 +112,37 @@ class VideoPlayerViewModel: ObservableObject {
     }
 
     func checkLocalVideoStatus() {
-        if let path = video.localVideoPath, !path.isEmpty, FileManager.default.fileExists(atPath: path) {
-            canPlayLocalVideo = true
+        print("🔍 DEBUG: checkLocalVideoStatus çağrıldı")
+        print("🔍 DEBUG: video.localVideoPath: \(video.localVideoPath ?? "nil")")
+        
+        if let path = video.localVideoPath, !path.isEmpty {
+            let fileExists = FileManager.default.fileExists(atPath: path)
+            print("🔍 DEBUG: Dosya var mı: \(fileExists)")
+            
+            if fileExists {
+                do {
+                    let attributes = try FileManager.default.attributesOfItem(atPath: path)
+                    let fileSize = attributes[.size] as? Int64 ?? 0
+                    print("🔍 DEBUG: Dosya boyutu: \(fileSize) bytes")
+                    
+                    if fileSize > 0 {
+                        canPlayLocalVideo = true
+                        print("🔍 DEBUG: canPlayLocalVideo = true")
+                    } else {
+                        canPlayLocalVideo = false
+                        print("🔍 DEBUG: Dosya boş, canPlayLocalVideo = false")
+                    }
+                } catch {
+                    print("🔍 DEBUG: Dosya özellikleri alınamadı: \(error)")
+                    canPlayLocalVideo = false
+                }
+            } else {
+                canPlayLocalVideo = false
+                print("🔍 DEBUG: Dosya bulunamadı, canPlayLocalVideo = false")
+            }
         } else {
             canPlayLocalVideo = false
-            // Eğer path var ama dosya yoksa, SwiftData'daki path'i de temizlemek iyi bir pratik olabilir.
-            // Ancak bu, deleteDownloadedVideo içinde zaten yapılmalı.
-            // if video.localVideoPath != nil && !video.localVideoPath!.isEmpty {
-            //     video.localVideoPath = nil
-            //     // try? modelContext.save() // Eğer ViewModel'in kendi context'i olsaydı.
-            // }
+            print("🔍 DEBUG: localVideoPath yok veya boş, canPlayLocalVideo = false")
         }
     }
 }
