@@ -25,6 +25,14 @@ struct MainTabView: View {
                     Label("Sıralama", systemImage: "list.star")
                     
                 }
+            
+            NavigationStack {
+                DownloadedVideosView()
+            }
+            .tabItem {
+                Label("İndirilenler", systemImage: "arrow.down.circle.fill")
+            }
+            
             NavigationStack {
                 NewsListView(modelContext: modelContext) // Veya kendi ViewModel'i
             }

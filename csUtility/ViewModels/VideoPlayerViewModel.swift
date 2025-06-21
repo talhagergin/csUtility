@@ -16,6 +16,8 @@ class VideoPlayerViewModel: ObservableObject {
 
     init(video: LineupVideo) {
         self.video = video // 'video' parametresini sakla
+        print("🔍 DEBUG: VideoPlayerViewModel init - video: \(video.title)")
+        print("🔍 DEBUG: - localVideoPath: \(video.localVideoPath ?? "nil")")
         checkLocalVideoStatus() // video'nun mevcut durumuna göre canPlayLocalVideo'yu ayarla
     }
 
@@ -50,8 +52,13 @@ class VideoPlayerViewModel: ObservableObject {
     }
 
     func downloadVideo(context: ModelContext) async {
+        print("🔍 DEBUG: downloadVideo başladı")
+        print("🔍 DEBUG: video.title: \(video.title)")
+        print("🔍 DEBUG: video.youtubeURL: \(video.youtubeURL)")
+        
         guard let videoID = extractYouTubeVideoID(from: video.youtubeURL) else {
             downloadError = "Geçersiz YouTube URL'si"
+            print("❌ DEBUG: Geçersiz YouTube URL'si")
             return
         }
         
@@ -59,12 +66,15 @@ class VideoPlayerViewModel: ObservableObject {
         downloadError = nil
         downloadProgress = 0.0
 
+        print("🔍 DEBUG: VideoDownloadService.downloadVideo çağrılıyor")
+
         // VideoDownloadService kullanarak gerçek video indirme
         downloadService.downloadVideo(
             youtubeURL: video.youtubeURL,
             progressHandler: { progress in
                 Task { @MainActor in
                     self.downloadProgress = progress
+                    print("🔍 DEBUG: İndirme progress: \(Int(progress * 100))%")
                 }
             },
             completion: { result in
@@ -112,7 +122,12 @@ class VideoPlayerViewModel: ObservableObject {
     }
     
     func deleteDownloadedVideo(context: ModelContext) {
-        guard let path = video.localVideoPath, !path.isEmpty else { return }
+        print("🔍 DEBUG: deleteDownloadedVideo çağrıldı")
+        guard let path = video.localVideoPath, !path.isEmpty else { 
+            print("❌ DEBUG: localVideoPath yok veya boş")
+            return 
+        }
+        
         do {
             try FileManager.default.removeItem(atPath: path)
             video.localVideoPath = nil // 'video' örneğini güncelle

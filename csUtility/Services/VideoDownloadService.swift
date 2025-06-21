@@ -22,25 +22,33 @@ class VideoDownloadService {
     // Gerçek YouTube video indirme fonksiyonu
     func downloadVideo(youtubeURL: String, progressHandler: @escaping (Double) -> Void, completion: @escaping (Result<URL, DownloadError>) -> Void) {
         
+        print("🔍 DEBUG: VideoDownloadService.downloadVideo başladı")
+        print("🔍 DEBUG: youtubeURL: \(youtubeURL)")
+        
         guard let url = URL(string: youtubeURL) else {
+            print("❌ DEBUG: Geçersiz URL formatı")
             completion(.failure(.invalidURL))
             return
         }
-
+        
         // YouTube video ID'sini çıkar
         guard let videoID = extractYouTubeVideoID(from: youtubeURL) else {
+            print("❌ DEBUG: Video ID çıkarılamadı")
             completion(.failure(.invalidURL))
             return
         }
+        
+        print("🔍 DEBUG: Video ID: \(videoID)")
         
         // Önce yt-dlp web servisi ile dene
         downloadWithYtDlp(videoURL: youtubeURL, videoID: videoID, progressHandler: progressHandler) { result in
             switch result {
             case .success(let localURL):
+                print("🔍 DEBUG: yt-dlp başarılı, localURL: \(localURL)")
                 completion(.success(localURL))
             case .failure(let error):
                 // yt-dlp başarısız olursa, YouTube Data API ile dene
-                print("yt-dlp failed: \(error), trying YouTube Data API...")
+                print("❌ DEBUG: yt-dlp failed: \(error), trying YouTube Data API...")
                 self.downloadWithYouTubeAPI(videoID: videoID, progressHandler: progressHandler, completion: completion)
             }
         }
@@ -49,11 +57,14 @@ class VideoDownloadService {
     // yt-dlp web servisi ile video indirme
     private func downloadWithYtDlp(videoURL: String, videoID: String, progressHandler: @escaping (Double) -> Void, completion: @escaping (Result<URL, DownloadError>) -> Void) {
         
+        print("🔍 DEBUG: downloadWithYtDlp başladı")
+        
         guard let serviceURL = URL(string: "\(ytDlpServiceURL)/download") else {
-             completion(.failure(.invalidURL))
-             return
+            print("❌ DEBUG: Geçersiz service URL")
+            completion(.failure(.invalidURL))
+            return
         }
-
+        
         var request = URLRequest(url: serviceURL)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
@@ -64,42 +75,54 @@ class VideoDownloadService {
             "output": "\(videoID).%(ext)s"
         ]
         
+        print("🔍 DEBUG: Request body: \(requestBody)")
+        
         do {
             request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
         } catch {
+            print("❌ DEBUG: JSON serialization hatası: \(error)")
             completion(.failure(.networkError(error)))
             return
         }
         
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
             if let error = error {
+                print("❌ DEBUG: Network error: \(error)")
                 completion(.failure(.networkError(error)))
                 return
             }
-
+            
             guard let data = data else {
+                print("❌ DEBUG: No data received")
                 completion(.failure(.unknown))
                 return
             }
-
+            
+            print("🔍 DEBUG: Response data received: \(String(data: data, encoding: .utf8) ?? "nil")")
+            
             // yt-dlp servisinden gelen yanıtı işle
             do {
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] {
                     if let success = json["success"] as? Bool, success {
                         if let downloadID = json["download_id"] as? String {
+                            print("🔍 DEBUG: Download ID received: \(downloadID)")
                             // İndirme durumunu takip et ve dosyayı al
                             self.monitorDownloadProgress(downloadID: downloadID, videoID: videoID, progressHandler: progressHandler, completion: completion)
                         } else {
+                            print("❌ DEBUG: Download ID not found in response")
                             completion(.failure(.ytDlpError("Download ID not found in response")))
                         }
                     } else {
                         let errorMessage = json["error"] as? String ?? "Unknown yt-dlp error"
+                        print("❌ DEBUG: yt-dlp error: \(errorMessage)")
                         completion(.failure(.ytDlpError(errorMessage)))
                     }
                 } else {
+                    print("❌ DEBUG: Invalid JSON response")
                     completion(.failure(.unknown))
                 }
             } catch {
+                print("❌ DEBUG: JSON parsing error: \(error)")
                 completion(.failure(.networkError(error)))
             }
         }
@@ -110,21 +133,28 @@ class VideoDownloadService {
     // İndirme durumunu takip et
     private func monitorDownloadProgress(downloadID: String, videoID: String, progressHandler: @escaping (Double) -> Void, completion: @escaping (Result<URL, DownloadError>) -> Void) {
         
+        print("🔍 DEBUG: monitorDownloadProgress başladı - downloadID: \(downloadID)")
+        
         guard let statusURL = URL(string: "\(ytDlpServiceURL)/status/\(downloadID)") else {
+            print("❌ DEBUG: Geçersiz status URL")
             completion(.failure(.invalidURL))
             return
         }
         
         let task = URLSession.shared.dataTask(with: statusURL) { data, response, error in
             if let error = error {
+                print("❌ DEBUG: Status check error: \(error)")
                 completion(.failure(.networkError(error)))
                 return
             }
             
             guard let data = data else {
+                print("❌ DEBUG: No status data received")
                 completion(.failure(.unknown))
                 return
             }
+            
+            print("🔍 DEBUG: Status response: \(String(data: data, encoding: .utf8) ?? "nil")")
             
             do {
                 if let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -132,6 +162,7 @@ class VideoDownloadService {
                    let status = json["status"] as? [String: Any] {
                     
                     let downloadStatus = status["status"] as? String ?? ""
+                    print("🔍 DEBUG: Download status: \(downloadStatus)")
                     
                     switch downloadStatus {
                     case "starting":
@@ -154,25 +185,31 @@ class VideoDownloadService {
                     case "completed":
                         // İndirme tamamlandı, dosyayı al
                         if let filename = status["filename"] as? String {
+                            print("🔍 DEBUG: Download completed, filename: \(filename)")
                             self.downloadCompletedFile(downloadID: downloadID, filename: filename, videoID: videoID, completion: completion)
                         } else {
+                            print("❌ DEBUG: Filename not found in completed status")
                             completion(.failure(.ytDlpError("Filename not found in completed status")))
                         }
                         
                     case "error":
                         // Hata oluştu
                         let errorMessage = status["error"] as? String ?? "Unknown error"
+                        print("❌ DEBUG: Download error: \(errorMessage)")
                         completion(.failure(.ytDlpError(errorMessage)))
                         
                     default:
                         // Bilinmeyen durum
+                        print("❌ DEBUG: Unknown download status: \(downloadStatus)")
                         completion(.failure(.ytDlpError("Unknown download status: \(downloadStatus)")))
                     }
                     
                 } else {
+                    print("❌ DEBUG: Invalid status response format")
                     completion(.failure(.unknown))
                 }
             } catch {
+                print("❌ DEBUG: Status JSON parsing error: \(error)")
                 completion(.failure(.networkError(error)))
             }
         }
@@ -183,21 +220,28 @@ class VideoDownloadService {
     // Tamamlanan dosyayı indir
     private func downloadCompletedFile(downloadID: String, filename: String, videoID: String, completion: @escaping (Result<URL, DownloadError>) -> Void) {
         
+        print("🔍 DEBUG: downloadCompletedFile başladı - downloadID: \(downloadID)")
+        
         guard let downloadURL = URL(string: "\(ytDlpServiceURL)/download/\(downloadID)") else {
+            print("❌ DEBUG: Geçersiz download URL")
             completion(.failure(.invalidURL))
             return
         }
         
         let task = URLSession.shared.downloadTask(with: downloadURL) { tempURL, response, error in
             if let error = error {
+                print("❌ DEBUG: File download error: \(error)")
                 completion(.failure(.networkError(error)))
                 return
             }
             
             guard let tempURL = tempURL else {
+                print("❌ DEBUG: No temp URL received")
                 completion(.failure(.unknown))
                 return
             }
+            
+            print("🔍 DEBUG: File downloaded to temp URL: \(tempURL)")
             
             // Dosyayı yerel dosya sistemine kaydet
             self.saveDownloadedVideo(from: tempURL, videoID: videoID, completion: completion)
@@ -209,20 +253,25 @@ class VideoDownloadService {
     // YouTube Data API ile video indirme (alternatif yöntem)
     private func downloadWithYouTubeAPI(videoID: String, progressHandler: @escaping (Double) -> Void, completion: @escaping (Result<URL, DownloadError>) -> Void) {
         
+        print("🔍 DEBUG: downloadWithYouTubeAPI başladı")
+        
         let apiURLString = "https://www.googleapis.com/youtube/v3/videos?part=snippet,contentDetails&id=\(videoID)&key=\(youtubeAPIKey)"
         
         guard let apiURL = URL(string: apiURLString) else {
+            print("❌ DEBUG: Geçersiz API URL")
             completion(.failure(.invalidURL))
             return
         }
         
         let task = URLSession.shared.dataTask(with: apiURL) { data, response, error in
             if let error = error {
+                print("❌ DEBUG: YouTube API error: \(error)")
                 completion(.failure(.networkError(error)))
                 return
             }
             
             guard let data = data else {
+                print("❌ DEBUG: No API data received")
                 completion(.failure(.unknown))
                 return
             }
@@ -237,14 +286,18 @@ class VideoDownloadService {
                     let title = snippet["title"] as? String ?? "Unknown"
                     let description = snippet["description"] as? String ?? ""
                     
+                    print("🔍 DEBUG: YouTube API video info - title: \(title)")
+                    
                     // YouTube Data API ile doğrudan video indirme mümkün değil
                     // Bu yüzden video bilgilerini kullanarak demo video oluştur
                     self.createDemoVideo(title: title, description: description, videoID: videoID, completion: completion)
                     
                 } else {
+                    print("❌ DEBUG: No video data found in API response")
                     completion(.failure(.youtubeAPIError("No video data found")))
                 }
             } catch {
+                print("❌ DEBUG: API JSON parsing error: \(error)")
                 completion(.failure(.networkError(error)))
             }
         }
@@ -258,12 +311,15 @@ class VideoDownloadService {
     // Demo video oluşturma (YouTube Data API kullanıldığında)
     private func createDemoVideo(title: String, description: String, videoID: String, completion: @escaping (Result<URL, DownloadError>) -> Void) {
         
+        print("🔍 DEBUG: createDemoVideo başladı - title: \(title)")
+        
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let videosFolder = documentsPath.appendingPathComponent("DownloadedVideos")
         
         do {
             try FileManager.default.createDirectory(at: videosFolder, withIntermediateDirectories: true, attributes: nil)
         } catch {
+            print("❌ DEBUG: Videos folder creation error: \(error)")
             completion(.failure(.fileSystemError(error)))
             return
         }
@@ -289,8 +345,10 @@ class VideoDownloadService {
         do {
             let demoData = Data(demoContent.utf8)
             try demoData.write(to: localFileURL)
+            print("🔍 DEBUG: Demo video created: \(localFileURL)")
             completion(.success(localFileURL))
         } catch {
+            print("❌ DEBUG: Demo video creation error: \(error)")
             completion(.failure(.fileSystemError(error)))
         }
     }
@@ -332,7 +390,7 @@ class VideoDownloadService {
         // downloadURL zaten indirilmiş dosyanın geçici URL'i, doğrudan kopyala
         do {
             try FileManager.default.copyItem(at: downloadURL, to: localFileURL)
-        
+            
             // Dosya boyutunu kontrol et
             let attributes = try FileManager.default.attributesOfItem(atPath: localFileURL.path)
             let fileSize = attributes[.size] as? Int64 ?? 0
@@ -373,7 +431,7 @@ class VideoDownloadService {
             }
         }
     }
-
+    
     func deleteLocalFile(atPath path: String) -> Bool {
         do {
             try FileManager.default.removeItem(atPath: path)

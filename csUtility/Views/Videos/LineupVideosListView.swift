@@ -113,7 +113,10 @@ struct LineupVideosListView: View {
                                         }
                                     }
                                     .onDelete { offsets in
-                                        deleteVideo(inCategory: category, at: offsets)
+                                        // Sadece admin kullanıcılar silebilir
+                                        if accountViewModel.isAdmin {
+                                            deleteVideo(inCategory: category, at: offsets)
+                                        }
                                     }
                                 }
                             }
@@ -158,8 +161,10 @@ struct LineupVideosListView: View {
         }
     }
     
-    // Silme işlemi artık kategori bazlı olmalı
+    // Silme işlemi artık kategori bazlı olmalı - sadece admin kullanıcılar
     private func deleteVideo(inCategory category: String, at offsets: IndexSet) {
+        guard accountViewModel.isAdmin else { return }
+        
         guard let videosInCategory = viewModel.categorizedVideos[category] else { return }
         offsets.forEach { index in
             let videoToDelete = videosInCategory[index]

@@ -21,8 +21,8 @@ struct VideoPlayerView: View {
     var body: some View {
         VStack {
             if let localPath = video.localVideoPath, !localPath.isEmpty {
-                // AVPlayer ile lokal video oynatma
-                LocalVideoPlayerView(videoPath: localPath)
+                let fileURL = URL(fileURLWithPath: localPath)
+                AVPlayerControllerView(videoURL: fileURL)
                     .frame(minHeight: 200, idealHeight: 300)
                     .cornerRadius(8)
             } else if let videoID = playerViewModel.extractYouTubeVideoID(from: video.youtubeURL) {
@@ -65,13 +65,27 @@ struct VideoPlayerView: View {
                     }
                 }
             } else {
-                Text("Video İndirilmiş")
-                    .foregroundColor(.green)
-                Button {
-                   playerViewModel.deleteDownloadedVideo(context: modelContext)
-                } label: {
-                    Label("İndirilen Videoyu Sil", systemImage: "trash.fill")
-                        .foregroundColor(.red)
+                VStack(spacing: 12) {
+                    Text("Video İndirilmiş")
+                        .foregroundColor(.green)
+                    
+                    HStack(spacing: 16) {
+                        Button {
+                           playerViewModel.deleteDownloadedVideo(context: modelContext)
+                        } label: {
+                            Label("Bu Videoyu Sil", systemImage: "trash.fill")
+                                .foregroundColor(.red)
+                        }
+                        .buttonStyle(.bordered)
+                        
+                        NavigationLink {
+                            DownloadedVideosView()
+                        } label: {
+                            Label("Tüm İndirilenler", systemImage: "list.bullet")
+                                .foregroundColor(.blue)
+                        }
+                        .buttonStyle(.bordered)
+                    }
                 }
                 .padding()
             }
@@ -105,119 +119,20 @@ struct VideoPlayerView: View {
     }
 }
 
-// Lokal video oynatmak için AVPlayerViewController wrapper'ı
-struct LocalVideoPlayerView: UIViewRepresentable {
-    let videoPath: String
-    
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView()
-        view.backgroundColor = .black
-        
-        print("🔍 DEBUG: LocalVideoPlayerView makeUIView")
-        print("🔍 DEBUG: videoPath: \(videoPath)")
-        
-        // Dosya path'ini URL'e çevir
-        let fileURL = URL(fileURLWithPath: videoPath)
-        print("🔍 DEBUG: fileURL: \(fileURL)")
-        
-        // Dosyanın var olup olmadığını kontrol et
-        guard FileManager.default.fileExists(atPath: videoPath) else {
-            print("❌ DEBUG: Video dosyası bulunamadı: \(videoPath)")
-            let errorLabel = UILabel()
-            errorLabel.text = "Video dosyası bulunamadı"
-            errorLabel.textColor = .white
-            errorLabel.textAlignment = .center
-            errorLabel.frame = view.bounds
-            errorLabel.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-            view.addSubview(errorLabel)
-            return view
-        }
-        
-        print("🔍 DEBUG: Video dosyası bulundu")
-        
-        // Dosya boyutunu kontrol et
-        do {
-            let attributes = try FileManager.default.attributesOfItem(atPath: videoPath)
-            let fileSize = attributes[.size] as? Int64 ?? 0
-            print("🔍 DEBUG: Dosya boyutu: \(fileSize) bytes")
-        } catch {
-            print("❌ DEBUG: Dosya özellikleri alınamadı: \(error)")
-        }
-        
-        // Demo video dosyası kontrolü
-        do {
-            let fileData = try Data(contentsOf: fileURL)
-            let fileContent = String(data: fileData, encoding: .utf8)
-            
-            // Eğer dosya demo içerikse, özel gösterim yap
-            if let content = fileContent, content.contains("Demo video content") {
-                let demoLabel = UILabel()
-                demoLabel.text = "Demo Video\n\nBu video demo amaçlı oluşturulmuştur.\nGerçek uygulamada YouTube video indirme API'si kullanılacaktır."
-                demoLabel.textColor = .white
-                demoLabel.textAlignment = .center
-                demoLabel.numberOfLines = 0
-                demoLabel.frame = view.bounds
-                demoLabel.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-                view.addSubview(demoLabel)
-                return view
-            }
-        } catch {
-            print("Dosya okuma hatası: \(error)")
-        }
-        
-        // Gerçek video dosyası için AVPlayer kullan
-        let player = AVPlayer(url: fileURL)
-        let playerViewController = AVPlayerViewController()
-        playerViewController.player = player
-        playerViewController.showsPlaybackControls = true
-        
-        // Player view controller'ı parent view'a ekle
-        if let parentViewController = context.coordinator.parentViewController {
-            parentViewController.addChild(playerViewController)
-            view.addSubview(playerViewController.view)
-            playerViewController.view.frame = view.bounds
-            playerViewController.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-            playerViewController.didMove(toParent: parentViewController)
-            
-            // Video otomatik olarak başlasın
-            player.play()
-        }
-        
-        return view
+// AVPlayerViewController'ı SwiftUI'da güvenli şekilde göstermek için
+struct AVPlayerControllerView: UIViewControllerRepresentable {
+    let videoURL: URL
+
+    func makeUIViewController(context: Context) -> AVPlayerViewController {
+        let controller = AVPlayerViewController()
+        controller.player = AVPlayer(url: videoURL)
+        controller.showsPlaybackControls = true
+        controller.player?.play()
+        return controller
     }
-    
-    func updateUIView(_ uiView: UIView, context: Context) {
-        // View güncellemeleri burada yapılabilir
-    }
-    
-    func makeCoordinator() -> Coordinator {
-        Coordinator()
-    }
-    
-    class Coordinator: NSObject {
-        weak var parentViewController: UIViewController?
-        
-        override init() {
-            super.init()
-            // Parent view controller'ı bul
-            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-               let window = windowScene.windows.first,
-               let rootViewController = window.rootViewController {
-                findTopViewController(from: rootViewController)
-            }
-        }
-        
-        private func findTopViewController(from viewController: UIViewController) {
-            if let presented = viewController.presentedViewController {
-                findTopViewController(from: presented)
-            } else if let navigationController = viewController as? UINavigationController {
-                findTopViewController(from: navigationController.visibleViewController ?? navigationController)
-            } else if let tabBarController = viewController as? UITabBarController {
-                findTopViewController(from: tabBarController.selectedViewController ?? tabBarController)
-            } else {
-                parentViewController = viewController
-            }
-        }
+
+    func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {
+        // Gerekirse güncelleme yapılabilir
     }
 }
 

@@ -42,6 +42,12 @@ struct UserProfileView: View {
                 } label: {
                     Label("Ayarlar", systemImage: "gear")
                 }
+                
+                NavigationLink {
+                    DownloadedVideosView()
+                } label: {
+                    Label("İndirilen Videolar", systemImage: "arrow.down.circle.fill")
+                }
             } header: {
                 Text("Uygulama")
             }
