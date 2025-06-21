@@ -2,7 +2,7 @@
   {
     "id": "dust2-longa-smoke-001",
     "title": "Dust II - Long A Smoke (T Spawn Köşe)",
-    "youtubeURL": "https://www.youtube.com/watch?v=VIDEO_ID_DUST2_SMOKE1",
+    "youtubeURL": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     "mapName": "Dust II",
     "utilityTypeRawValue": "Smoke",
     "category": "Long A",
@@ -12,7 +12,7 @@
   {
     "id": "dust2-midcross-smoke-002",
     "title": "Dust II - Mid Cross Smoke (T Spawn)",
-    "youtubeURL": "https://www.youtube.com/watch?v=VIDEO_ID_DUST2_SMOKE2",
+    "youtubeURL": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     "mapName": "Dust II",
     "utilityTypeRawValue": "Smoke",
     "category": "Mid",
@@ -22,7 +22,7 @@
   {
     "id": "mirage-window-smoke-001",
     "title": "Mirage - Window Smoke (T Spawn Merdiven Altı)",
-    "youtubeURL": "https://www.youtube.com/watch?v=VIDEO_ID_MIRAGE_SMOKE1",
+    "youtubeURL": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     "mapName": "Mirage",
     "utilityTypeRawValue": "Smoke",
     "category": "Window",
@@ -31,8 +31,8 @@
   },
   {
     "id": "mirage-window-smoke-002",
-    "title": "Mirage - Window Smoke (T Spawn 1",
-    "youtubeURL": "https://youtu.be/8Ee2VkOPAlg ",
+    "title": "Mirage - Window Smoke (T Spawn 1)",
+    "youtubeURL": "https://youtu.be/8Ee2VkOPAlg",
     "mapName": "Mirage",
     "utilityTypeRawValue": "Smoke",
     "category": "Window",
@@ -42,7 +42,7 @@
   {
     "id": "mirage-connector-molo-002",
     "title": "Mirage - Connector Molotov (A Ramp)",
-    "youtubeURL": "https://www.youtube.com/watch?v=VIDEO_ID_MIRAGE_MOLO1",
+    "youtubeURL": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     "mapName": "Mirage",
     "utilityTypeRawValue": "Molotov",
     "category": "Connector",
@@ -52,7 +52,7 @@
   {
     "id": "inferno-banana-smoke-001",
     "title": "Inferno - Banana Derin Smoke (T Spawn Duvar)",
-    "youtubeURL": "https://www.youtube.com/watch?v=VIDEO_ID_INFERNO_SMOKE1",
+    "youtubeURL": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     "mapName": "Inferno",
     "utilityTypeRawValue": "Smoke",
     "category": "Banana",
@@ -62,7 +62,7 @@
   {
     "id": "inferno-aps-flash-002",
     "title": "Inferno - Aps Flash (Tek Yönlü)",
-    "youtubeURL": "https://www.youtube.com/watch?v=VIDEO_ID_INFERNO_FLASH1",
+    "youtubeURL": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     "mapName": "Inferno",
     "utilityTypeRawValue": "Flashbang",
     "category": "A Site",
@@ -72,7 +72,7 @@
   {
     "id": "nuke-secret-smoke-001",
     "title": "Nuke - Secret Smoke (Dışarıdan)",
-    "youtubeURL": "https://www.youtube.com/watch?v=VIDEO_ID_NUKE_SMOKE1",
+    "youtubeURL": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     "mapName": "Nuke",
     "utilityTypeRawValue": "Smoke",
     "category": "A Site",

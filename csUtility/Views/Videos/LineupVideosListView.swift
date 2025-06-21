@@ -5,15 +5,15 @@ struct LineupVideosListView: View {
     @StateObject var viewModel: LineupVideoViewModel
     @EnvironmentObject var accountViewModel: AccountViewModel
     @Environment(\.modelContext) private var modelContext
+    @StateObject private var settingsViewModel = SettingsViewModel()
     
-    @State private var showThumbnails: Bool = true // Kullanıcı tercihi için
     @State private var downloadingVideos: Set<UUID> = [] // İndirilen videoları takip etmek için
 
     var body: some View {
         VStack {
-            // Thumbnail gösterme/gizleme toggle'ı
+            // Thumbnail gösterme/gizleme toggle'ı - artık ayarlardan alınıyor
             HStack {
-                Toggle("Lineup görsellerini göster", isOn: $showThumbnails)
+                Toggle("Lineup görsellerini göster", isOn: $settingsViewModel.showThumbnails)
                     .toggleStyle(SwitchToggleStyle())
                 Spacer()
             }
@@ -22,22 +22,28 @@ struct LineupVideosListView: View {
             Group {
                 if viewModel.isLoading {
                     ProgressView("Videolar yükleniyor...")
-                } else if let error = viewModel.errorMessage {
-                    Text("Hata: \(error)")
-                        .foregroundColor(.red)
-                } else if viewModel.categorizedVideos.isEmpty { // Kategorize edilmiş video yoksa
-                    Text("Bu kategori için henüz video bulunmamaktadır.")
-                        .foregroundColor(.secondary)
+                } else if viewModel.categorizedVideos.isEmpty {
+                    VStack {
+                        Image(systemName: "video.slash")
+                            .font(.system(size: 50))
+                            .foregroundColor(.gray)
+                        Text("Bu kategoride henüz video bulunmuyor")
+                            .font(.headline)
+                            .foregroundColor(.gray)
+                        Text("Admin hesabı ile yeni video ekleyebilirsiniz")
+                            .font(.caption)
+                            .foregroundColor(.gray)
+                    }
+                    .padding()
                 } else {
                     List {
-                        ForEach(viewModel.sortedCategoryKeys, id: \.self) { categoryKey in
-                            // O kategoriye ait videoları al
-                            if let videosInCategory = viewModel.categorizedVideos[categoryKey] {
-                                Section(header: Text(categoryKey).font(.title3).fontWeight(.medium)) { // Kategori başlığı
+                        ForEach(viewModel.sortedCategoryKeys, id: \.self) { category in
+                            if let videosInCategory = viewModel.categorizedVideos[category] {
+                                Section(header: Text(category)) {
                                     ForEach(videosInCategory) { video in
                                         NavigationLink(value: video) {
                                             HStack(alignment: .center, spacing: 12) {
-                                                if showThumbnails, let url = video.youtubeThumbnailURL {
+                                                if settingsViewModel.showThumbnails, let url = video.youtubeThumbnailURL {
                                                     AsyncImage(url: url) { image in
                                                         image
                                                             .resizable()
@@ -55,6 +61,7 @@ struct LineupVideosListView: View {
                                                             )
                                                     }
                                                 }
+                                                
                                                 VStack(alignment: .leading, spacing: 4) {
                                                     Text(video.title)
                                                         .font(.headline)
@@ -69,7 +76,7 @@ struct LineupVideosListView: View {
                                                             Text("İndiriliyor...")
                                                                 .font(.caption)
                                                                 .foregroundColor(.blue)
-                                                        } else {
+                                                        } else if settingsViewModel.isVideoDownloadEnabled {
                                                             Button(action: {
                                                                 downloadVideo(video)
                                                             }) {
@@ -78,21 +85,41 @@ struct LineupVideosListView: View {
                                                                     .foregroundColor(.blue)
                                                             }
                                                             .buttonStyle(PlainButtonStyle())
+                                                        } else {
+                                                            Text("İndirme Devre Dışı")
+                                                                .font(.caption)
+                                                                .foregroundColor(.secondary)
                                                         }
+                                                        
                                                         Spacer()
+                                                        
+                                                        if accountViewModel.isAdmin {
+                                                            Button(action: {
+                                                                // Admin silme işlemi
+                                                                viewModel.deleteVideo(video: video)
+                                                            }) {
+                                                                Image(systemName: "trash")
+                                                                    .foregroundColor(.red)
+                                                                    .font(.caption)
+                                                            }
+                                                            .buttonStyle(PlainButtonStyle())
+                                                        }
                                                     }
                                                 }
+                                                
+                                                Spacer()
                                             }
-                                            .padding(.vertical, 4) // Satırlar arası biraz boşluk
+                                            .padding(.vertical, 4)
                                         }
                                     }
-                                    .onDelete(perform: accountViewModel.isAdmin ? { indexSet in
-                                        deleteVideo(inCategory: categoryKey, at: indexSet)
-                                    } : nil)
+                                    .onDelete { offsets in
+                                        deleteVideo(inCategory: category, at: offsets)
+                                    }
                                 }
                             }
                         }
                     }
+                    .listStyle(.insetGrouped)
                 }
             }
         }
@@ -100,30 +127,22 @@ struct LineupVideosListView: View {
         .toolbar {
             if accountViewModel.isAdmin {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink {
-                        AdminUploadVideoView(
-                            map: viewModel.selectedMap,
-                            utilityType: viewModel.selectedUtility,
-                            onUploadComplete: {
-                                viewModel.fetchVideos()
-                            }
-                        )
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
+                    NavigationLink(destination: AdminUploadVideoView(
+                        map: viewModel.selectedMap,
+                        utilityType: viewModel.selectedUtility
+                    ) {
+                        viewModel.fetchVideos()
+                    }) {
+                        Image(systemName: "plus")
                     }
                 }
             }
         }
-        .navigationDestination(for: LineupVideo.self) { video in
-            VideoPlayerView(video: video)
-        }
-        // .onAppear { // ViewModel init'te zaten çağrılıyor.
-        //     viewModel.fetchVideos()
-        // }
     }
     
-    // Video indirme fonksiyonu
     private func downloadVideo(_ video: LineupVideo) {
+        guard settingsViewModel.isVideoDownloadEnabled else { return }
+        
         downloadingVideos.insert(video.id)
         
         Task {
@@ -146,3 +165,4 @@ struct LineupVideosListView: View {
         // ViewModel.fetchVideos() zaten deleteVideo içinde çağrılıyor, listeyi yenileyecektir.
     }
 }
+

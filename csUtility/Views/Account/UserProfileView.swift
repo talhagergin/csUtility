@@ -3,6 +3,7 @@ import SwiftData // Gerekirse
 
 struct UserProfileView: View {
     @EnvironmentObject var viewModel: AccountViewModel
+    @State private var showingSettings = false
 
     var body: some View {
         List { 
@@ -35,6 +36,16 @@ struct UserProfileView: View {
                 Text("Kullanıcı Bilgileri")
             }
             
+            Section {
+                Button {
+                    showingSettings = true
+                } label: {
+                    Label("Ayarlar", systemImage: "gear")
+                }
+            } header: {
+                Text("Uygulama")
+            }
+            
             if viewModel.isAdmin {
                 Section {
                     NavigationLink("Haber Ekle/Yönet") {
@@ -55,6 +66,9 @@ struct UserProfileView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
             }
+        }
+        .sheet(isPresented: $showingSettings) {
+            SettingsView()
         }
         // .navigationTitle("Hesabım") // Ana AccountView başlığı ayarladığı için burada gerek yok.
     }

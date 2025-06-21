@@ -11,6 +11,14 @@ struct VideoPlayerView: View {
 
     @StateObject private var playerViewModel: VideoPlayerViewModel
     @Environment(\.modelContext) private var modelContext
+    @StateObject private var settingsViewModel = SettingsViewModel()
+    
+    // YouTubeService'i normal instance olarak oluştur
+    private let youtubeService = YouTubeService()
+    
+    @State private var showingYouTubeOptions = false
+    @State private var showingErrorAlert = false
+    @State private var errorMessage = ""
 
     init(video: LineupVideo) {
         self.video = video
@@ -37,30 +45,72 @@ struct VideoPlayerView: View {
                 .font(.title2)
                 .padding()
 
-            if video.localVideoPath == nil || video.localVideoPath!.isEmpty {
-                if playerViewModel.isDownloading {
-                    ProgressView("İndiriliyor: \(Int(playerViewModel.downloadProgress * 100))%")
-                } else {
-                    Button {
-                        Task {
-                            await playerViewModel.downloadVideo(context: modelContext)
+            // Video seçenekleri
+            VStack(spacing: 12) {
+                if video.localVideoPath == nil || video.localVideoPath!.isEmpty {
+                    if playerViewModel.isDownloading {
+                        ProgressView("İndiriliyor: \(Int(playerViewModel.downloadProgress * 100))%")
+                    } else {
+                        // YouTube'da açma butonu (her zaman mevcut)
+                        Button {
+                            openInYouTube()
+                        } label: {
+                            Label("YouTube'da Aç", systemImage: "play.rectangle.fill")
+                                .frame(maxWidth: .infinity)
                         }
-                    } label: {
-                        Label("Videoyu İndir", systemImage: "arrow.down.circle.fill")
+                        .buttonStyle(.borderedProminent)
+                        .padding(.horizontal)
+                        
+                        // İndirme butonu (sadece ayarlar açıksa)
+                        if settingsViewModel.isVideoDownloadEnabled {
+                            Button {
+                                Task {
+                                    await playerViewModel.downloadVideo(context: modelContext)
+                                }
+                            } label: {
+                                Label("Videoyu İndir", systemImage: "arrow.down.circle.fill")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.bordered)
+                            .padding(.horizontal)
+                            .disabled(playerViewModel.extractYouTubeVideoID(from: video.youtubeURL) == nil)
+                        } else {
+                            VStack(spacing: 4) {
+                                Text("Video İndirme Devre Dışı")
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                Text("İndirme özelliğini ayarlardan aktif edebilirsiniz")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding()
+                        }
                     }
-                    .padding()
-                    .disabled(playerViewModel.extractYouTubeVideoID(from: video.youtubeURL) == nil)
-                }
-            } else {
-                Text("Video İndirilmiş")
-                    .foregroundColor(.green)
-                Button {
-                   playerViewModel.deleteDownloadedVideo(context: modelContext)
-                } label: {
-                    Label("İndirilen Videoyu Sil", systemImage: "trash.fill")
+                } else {
+                    Text("Video İndirilmiş")
+                        .foregroundColor(.green)
+                        .font(.headline)
+                    
+                    HStack(spacing: 12) {
+                        Button {
+                            openInYouTube()
+                        } label: {
+                            Label("YouTube'da Aç", systemImage: "play.rectangle.fill")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        
+                        Button {
+                           playerViewModel.deleteDownloadedVideo(context: modelContext)
+                        } label: {
+                            Label("Sil", systemImage: "trash.fill")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
                         .foregroundColor(.red)
+                    }
+                    .padding(.horizontal)
                 }
-                .padding()
             }
             
             if let downloadError = playerViewModel.downloadError {
@@ -72,12 +122,49 @@ struct VideoPlayerView: View {
             Spacer()
         }
         .navigationTitle("Lineup")
+        .alert("Hata", isPresented: $showingErrorAlert) {
+            Button("Tamam", role: .cancel) { }
+        } message: {
+            Text(errorMessage)
+        }
         .onAppear {
             print("🔍 DEBUG: VideoPlayerView onAppear")
             print("🔍 DEBUG: video.localVideoPath: \(video.localVideoPath ?? "nil")")
+            print("🔍 DEBUG: video.youtubeURL: \(video.youtubeURL)")
+            
+            if let localPath = video.localVideoPath, !localPath.isEmpty {
+                print("🔍 DEBUG: Lokal video oynatılacak: \(localPath)")
+            } else if let videoID = playerViewModel.extractYouTubeVideoID(from: video.youtubeURL) {
+                print("🔍 DEBUG: YouTube video oynatılacak: \(videoID)")
+            } else {
+                print("❌ DEBUG: Geçersiz YouTube URL'si: \(video.youtubeURL)")
+            }
+            
             playerViewModel.checkLocalVideoStatus()
             print("🔍 DEBUG: checkLocalVideoStatus çağrıldı")
             print("🔍 DEBUG: playerViewModel.canPlayLocalVideo: \(playerViewModel.canPlayLocalVideo)")
+        }
+    }
+    
+    private func openInYouTube() {
+        guard let videoID = playerViewModel.extractYouTubeVideoID(from: video.youtubeURL) else {
+            errorMessage = "Geçersiz YouTube URL'si"
+            showingErrorAlert = true
+            return
+        }
+        
+        // Önce YouTube uygulamasında açmayı dene
+        if let youtubeAppURL = youtubeService.createYouTubeAppURL(videoID: videoID),
+           UIApplication.shared.canOpenURL(youtubeAppURL) {
+            UIApplication.shared.open(youtubeAppURL)
+        } else {
+            // YouTube uygulaması yoksa web'de aç
+            if let youtubeWebURL = youtubeService.createYouTubeURL(videoID: videoID) {
+                UIApplication.shared.open(youtubeWebURL)
+            } else {
+                errorMessage = "YouTube'da açılamadı"
+                showingErrorAlert = true
+            }
         }
     }
 }
@@ -155,6 +242,9 @@ struct LocalVideoPlayerView: UIViewRepresentable {
             playerViewController.view.frame = view.bounds
             playerViewController.view.autoresizingMask = [.flexibleWidth, .flexibleHeight]
             playerViewController.didMove(toParent: parentViewController)
+            
+            // Video otomatik olarak başlasın
+            player.play()
         }
         
         return view
@@ -196,7 +286,6 @@ struct LocalVideoPlayerView: UIViewRepresentable {
 }
 
 // WKWebView'ı SwiftUI'da kullanmak için UIViewRepresentable struct'ı
-// BU STRUCT ZATEN SİZDE VAR (BİRAZ ÖNCE PAYLAŞTIĞINIZ KOD)
 struct YouTubeWebView: UIViewRepresentable {
     let videoID: String
 
@@ -204,19 +293,30 @@ struct YouTubeWebView: UIViewRepresentable {
         let webConfiguration = WKWebViewConfiguration()
         webConfiguration.allowsInlineMediaPlayback = true
         webConfiguration.mediaTypesRequiringUserActionForPlayback = []
+        
         let webView = WKWebView(frame: .zero, configuration: webConfiguration)
         webView.scrollView.isScrollEnabled = false
+        webView.scrollView.bounces = false
         webView.navigationDelegate = context.coordinator
+        webView.backgroundColor = .black
+        
         return webView
     }
 
     func updateUIView(_ uiView: WKWebView, context: Context) {
-        guard let youtubeURL = URL(string: "https://www.youtube.com/embed/\(videoID)?playsinline=1&modestbranding=1&rel=0") else {
-            print("Geçersiz YouTube embed URL'si")
+        // Daha basit YouTube embed URL'i
+        let embedURL = "https://www.youtube.com/embed/\(videoID)?playsinline=1&modestbranding=1&rel=0"
+        
+        guard let youtubeURL = URL(string: embedURL) else {
+            print("❌ DEBUG: Geçersiz YouTube embed URL'si: \(embedURL)")
             return
         }
+        
+        print("🔍 DEBUG: YouTube WebView yükleniyor: \(youtubeURL)")
+        
         if uiView.url?.absoluteString != youtubeURL.absoluteString {
-            uiView.load(URLRequest(url: youtubeURL))
+            let request = URLRequest(url: youtubeURL)
+            uiView.load(request)
         }
     }
 
@@ -226,14 +326,25 @@ struct YouTubeWebView: UIViewRepresentable {
 
     class Coordinator: NSObject, WKNavigationDelegate {
         var parent: YouTubeWebView
+        
         init(_ parent: YouTubeWebView) {
             self.parent = parent
         }
-        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-            print("YouTube WebView yüklenirken hata oluştu (provisional): \(error.localizedDescription)")
+        
+        func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+            print("🔍 DEBUG: YouTube WebView yüklenmeye başladı")
         }
+        
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            print("🔍 DEBUG: YouTube WebView yüklendi")
+        }
+        
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            print("❌ DEBUG: YouTube WebView yüklenirken hata oluştu (provisional): \(error.localizedDescription)")
+        }
+        
         func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-            print("YouTube WebView yüklenirken hata oluştu (committed): \(error.localizedDescription)")
+            print("❌ DEBUG: YouTube WebView yüklenirken hata oluştu (committed): \(error.localizedDescription)")
         }
     }
 }

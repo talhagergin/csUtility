@@ -20,19 +20,33 @@ class VideoPlayerViewModel: ObservableObject {
     }
 
     func extractYouTubeVideoID(from urlString: String) -> String? {
-        // ... (kod değişmedi)
-        guard let url = URL(string: urlString) else { return nil }
+        print("🔍 DEBUG: YouTube URL parse ediliyor: \(urlString)")
+        
+        guard let url = URL(string: urlString) else { 
+            print("❌ DEBUG: Geçersiz URL formatı")
+            return nil 
+        }
 
         if url.host?.contains("youtu.be") == true {
-            return url.lastPathComponent
+            let videoID = url.lastPathComponent
+            print("🔍 DEBUG: youtu.be formatı - Video ID: \(videoID)")
+            return videoID
         }
 
         if url.path.contains("/embed/") {
-             return url.lastPathComponent
+            let videoID = url.lastPathComponent
+            print("🔍 DEBUG: embed formatı - Video ID: \(videoID)")
+            return videoID
         }
         
         let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-        return components?.queryItems?.first(where: { $0.name == "v" })?.value
+        if let videoID = components?.queryItems?.first(where: { $0.name == "v" })?.value {
+            print("🔍 DEBUG: youtube.com formatı - Video ID: \(videoID)")
+            return videoID
+        }
+        
+        print("❌ DEBUG: Video ID bulunamadı")
+        return nil
     }
 
     func downloadVideo(context: ModelContext) async {
