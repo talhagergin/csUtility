@@ -6,7 +6,7 @@ enum CSMap: String, CaseIterable, Identifiable {
     case inferno = "Inferno"
     case train = "Train"
     case nuke = "Nuke"
-    case vertigo = "Vertigo"
+    case anubis = "Anubis"
     case ancient = "Ancient"
     // case anubis = "Anubis" // CS2'de aktif harita havuzunda
 
@@ -19,6 +19,7 @@ enum CSMap: String, CaseIterable, Identifiable {
         case .nuke: return "nukecs2"
         case .ancient: return "ancientcs2"
         case .train: return "traincs2"
+        case .anubis: return "anubiscs2"
         // ... Diğer haritalar
         default: return "map_placeholder_image"
         }

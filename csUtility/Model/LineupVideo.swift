@@ -24,6 +24,25 @@ final class LineupVideo {
         set { mapName = newValue?.rawValue ?? "" }
     }
 
+    /// YouTube thumbnail URL'si (hqdefault)
+    var youtubeThumbnailURL: URL? {
+        guard let videoID = Self.extractYouTubeVideoID(from: youtubeURL) else { return nil }
+        return URL(string: "https://img.youtube.com/vi/\(videoID)/hqdefault.jpg")
+    }
+    
+    /// YouTube video ID'sini URL'den çıkarır
+    static func extractYouTubeVideoID(from urlString: String) -> String? {
+        guard let url = URL(string: urlString) else { return nil }
+        if url.host?.contains("youtu.be") == true {
+            return url.lastPathComponent
+        }
+        if url.path.contains("/embed/") {
+            return url.lastPathComponent
+        }
+        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        return components?.queryItems?.first(where: { $0.name == "v" })?.value
+    }
+
     init(id: UUID = UUID(), title: String = "", youtubeURL: String = "", mapName: String = "", utilityType: UtilityType = .smoke, category: String? = nil, uploadedDate: Date = Date(), uploaderID: String? = nil, localVideoPath: String? = nil) {
         self.id = id
         self.title = title

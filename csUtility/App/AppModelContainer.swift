@@ -9,7 +9,7 @@ public actor AppModelContainer {
             LineupVideo.self,
             User.self,
             NewsItem.self,
-            TeamRanking.self // TeamRanking modelini eklemiştik
+            TeamRanking.self
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
@@ -37,8 +37,6 @@ public actor AppModelContainer {
                     print("Successfully saved changes to ModelContainer (admin/seed data).")
                 } catch {
                     print("ERROR: Could not save initial data to ModelContainer: \(error.localizedDescription)")
-                    // Geliştirme sırasında bu hatayı görmek önemlidir.
-                    // Production'da daha nazik bir hata yönetimi gerekebilir.
                 }
             } else {
                 print("No changes to save in ModelContainer after initial setup (admin exists, data already seeded).")
@@ -49,10 +47,4 @@ public actor AppModelContainer {
             fatalError("Could not create ModelContainer: \(error)")
         }
     }()
-    
-    // seedInitialData, loadLineupsFromJSON, loadRankingsFromJSON fonksiyonları
-    // ya ayrı bir dosyada (DataSeeder.swift gibi) ya da bu dosyanın içinde
-    // AppModelContainer actor'ının DIŞINDA tanımlanmalıdır.
-    // @MainActor ile işaretlendikleri için ModelContainer'ın @MainActor
-    // static 'shared' özelliği içinden çağrılabilirler.
 }

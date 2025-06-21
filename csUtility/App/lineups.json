@@ -30,6 +30,16 @@
     "uploaderID": "app_seed_admin"
   },
   {
+    "id": "mirage-window-smoke-002",
+    "title": "Mirage - Window Smoke (T Spawn 1",
+    "youtubeURL": "https://youtu.be/8Ee2VkOPAlg ",
+    "mapName": "Mirage",
+    "utilityTypeRawValue": "Smoke",
+    "category": "Window",
+    "uploadedDate": "2024-03-09T14:20:00Z",
+    "uploaderID": "app_seed_admin"
+  },
+  {
     "id": "mirage-connector-molo-002",
     "title": "Mirage - Connector Molotov (A Ramp)",
     "youtubeURL": "https://www.youtube.com/watch?v=VIDEO_ID_MIRAGE_MOLO1",
