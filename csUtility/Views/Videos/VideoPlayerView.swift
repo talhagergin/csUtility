@@ -12,6 +12,8 @@ struct VideoPlayerView: View {
     @StateObject private var playerViewModel: VideoPlayerViewModel
     @Environment(\.modelContext) private var modelContext
     @StateObject private var settingsViewModel = SettingsViewModel()
+    @StateObject private var networkMonitor = NetworkMonitor()
+    @State private var localVideoError: String?
 
     init(video: LineupVideo) {
         self.video = video
@@ -20,24 +22,99 @@ struct VideoPlayerView: View {
     
     var body: some View {
         VStack {
+            // Video oynatma alanı
             if let localPath = video.localVideoPath, !localPath.isEmpty {
-                let fileURL = URL(fileURLWithPath: localPath)
-                AVPlayerControllerView(videoURL: fileURL)
+                // Yerel video dosyasının varlığını kontrol et
+                if FileManager.default.fileExists(atPath: localPath) {
+                    let fileURL = URL(fileURLWithPath: localPath)
+                    AVPlayerControllerView(videoURL: fileURL, onError: { error in
+                        localVideoError = error
+                    })
                     .frame(minHeight: 200, idealHeight: 300)
                     .cornerRadius(8)
-            } else if let videoID = playerViewModel.extractYouTubeVideoID(from: video.youtubeURL) {
-                // BURADA YouTubeWebView ÇAĞRILIYOR
-                YouTubeWebView(videoID: videoID)
+                } else {
+                    // Dosya bulunamadı - veritabanını temizle
+                    VStack(spacing: 12) {
+                        Image(systemName: "exclamationmark.triangle")
+                            .font(.system(size: 40))
+                            .foregroundColor(.orange)
+                        
+                        Text("Video Dosyası Bulunamadı")
+                            .font(.headline)
+                            .foregroundColor(.orange)
+                        
+                        Text("Video dosyası silinmiş veya taşınmış olabilir.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                        
+                        Button("Veritabanını Temizle") {
+                            video.localVideoPath = nil
+                            try? modelContext.save()
+                            localVideoError = nil
+                        }
+                        .buttonStyle(.bordered)
+                        .foregroundColor(.blue)
+                    }
+                    .padding()
                     .frame(minHeight: 200, idealHeight: 300)
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(8)
+                }
+            } else if let videoID = playerViewModel.extractYouTubeVideoID(from: video.youtubeURL) {
+                // İnternet bağlantısı kontrolü
+                if networkMonitor.isConnected {
+                    YouTubeWebView(videoID: videoID)
+                        .frame(minHeight: 200, idealHeight: 300)
+                } else {
+                    // İnternet bağlantısı yok
+                    VStack(spacing: 12) {
+                        Image(systemName: "wifi.slash")
+                            .font(.system(size: 40))
+                            .foregroundColor(.orange)
+                        
+                        Text("İnternet Bağlantısı Gerekli")
+                            .font(.headline)
+                            .foregroundColor(.orange)
+                        
+                        Text("Bu video oynatmak için internet bağlantısı gereklidir.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                        
+                        if settingsViewModel.isVideoDownloadEnabled {
+                            Button("Videoyu İndir") {
+                                Task {
+                                    await playerViewModel.downloadVideo(context: modelContext)
+                                }
+                            }
+                            .buttonStyle(.bordered)
+                            .foregroundColor(.blue)
+                        }
+                    }
+                    .padding()
+                    .frame(minHeight: 200, idealHeight: 300)
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(8)
+                }
             } else {
                 Text("Geçersiz YouTube URL'si")
                     .foregroundColor(.red)
+            }
+
+            // Yerel video oynatma hatası
+            if let error = localVideoError {
+                Text("Video Oynatma Hatası: \(error)")
+                    .font(.caption)
+                    .foregroundColor(.red)
+                    .padding(.horizontal)
             }
 
             Text(video.title)
                 .font(.title2)
                 .padding()
 
+            // Video indirme/mevcut durumu
             if video.localVideoPath == nil || video.localVideoPath!.isEmpty {
                 if playerViewModel.isDownloading {
                     ProgressView("İndiriliyor: \(Int(playerViewModel.downloadProgress * 100))%")
@@ -103,9 +180,18 @@ struct VideoPlayerView: View {
             print("🔍 DEBUG: VideoPlayerView onAppear")
             print("🔍 DEBUG: video.localVideoPath: \(video.localVideoPath ?? "nil")")
             print("🔍 DEBUG: video.youtubeURL: \(video.youtubeURL)")
+            print("🔍 DEBUG: İnternet bağlantısı: \(networkMonitor.isConnected)")
             
             if let localPath = video.localVideoPath, !localPath.isEmpty {
                 print("🔍 DEBUG: Lokal video oynatılacak: \(localPath)")
+                let fileExists = FileManager.default.fileExists(atPath: localPath)
+                print("🔍 DEBUG: Dosya var mı: \(fileExists)")
+                
+                if !fileExists {
+                    print("❌ DEBUG: Dosya bulunamadı, veritabanı temizlenmeli")
+                    video.localVideoPath = nil
+                    try? modelContext.save()
+                }
             } else if let videoID = playerViewModel.extractYouTubeVideoID(from: video.youtubeURL) {
                 print("🔍 DEBUG: YouTube video oynatılacak: \(videoID)")
             } else {
@@ -122,17 +208,70 @@ struct VideoPlayerView: View {
 // AVPlayerViewController'ı SwiftUI'da güvenli şekilde göstermek için
 struct AVPlayerControllerView: UIViewControllerRepresentable {
     let videoURL: URL
+    let onError: (String) -> Void
 
     func makeUIViewController(context: Context) -> AVPlayerViewController {
         let controller = AVPlayerViewController()
-        controller.player = AVPlayer(url: videoURL)
+        
+        // AVPlayer'ı oluştur ve hata dinleyicisi ekle
+        let player = AVPlayer(url: videoURL)
+        controller.player = player
         controller.showsPlaybackControls = true
-        controller.player?.play()
+        
+        // Video yükleme durumunu takip et
+        let playerItem = player.currentItem
+        NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemFailedToPlayToEndTime,
+            object: playerItem,
+            queue: .main
+        ) { _ in
+            onError("Video oynatılamadı")
+        }
+        
+        // Video hazır olduğunda oynatmaya başla
+        playerItem?.addObserver(context.coordinator, forKeyPath: "status", options: [.new], context: nil)
+        
+        // Player referansını coordinator'a geç
+        context.coordinator.player = player
+        
         return controller
     }
 
     func updateUIViewController(_ uiViewController: AVPlayerViewController, context: Context) {
         // Gerekirse güncelleme yapılabilir
+    }
+    
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+    
+    class Coordinator: NSObject {
+        let parent: AVPlayerControllerView
+        var player: AVPlayer?
+        
+        init(_ parent: AVPlayerControllerView) {
+            self.parent = parent
+        }
+        
+        override func observeValue(forKeyPath keyPath: String?, of object: Any?, change: [NSKeyValueChangeKey : Any]?, context: UnsafeMutableRawPointer?) {
+            if keyPath == "status" {
+                if let playerItem = object as? AVPlayerItem {
+                    switch playerItem.status {
+                    case .readyToPlay:
+                        print("🔍 DEBUG: Video oynatıma hazır")
+                        parent.videoURL.startAccessingSecurityScopedResource()
+                        player?.play()
+                    case .failed:
+                        print("❌ DEBUG: Video yükleme hatası: \(playerItem.error?.localizedDescription ?? "Bilinmeyen hata")")
+                        parent.onError("Video yüklenemedi: \(playerItem.error?.localizedDescription ?? "Bilinmeyen hata")")
+                    case .unknown:
+                        print("🔍 DEBUG: Video durumu bilinmiyor")
+                    @unknown default:
+                        break
+                    }
+                }
+            }
+        }
     }
 }
 

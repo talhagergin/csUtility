@@ -14,9 +14,10 @@ enum DownloadError: Error {
 class VideoDownloadService {
     
     // yt-dlp web servisi URL'i (bu URL'i kendi sunucunuzda çalıştırmanız gerekiyor)
-    private let ytDlpServiceURL = "http://192.168.1.2:5001"
+    private let ytDlpServiceURL = "http://localhost:5001"
     
     // YouTube Data API key (Google Cloud Console'dan alınmalı)
+    // Not: Gerçek bir API key gerekli, şimdilik yt-dlp kullanacağız
     private let youtubeAPIKey = "YOUR_YOUTUBE_API_KEY"
     
     // Gerçek YouTube video indirme fonksiyonu
@@ -391,15 +392,35 @@ class VideoDownloadService {
         do {
             try FileManager.default.copyItem(at: downloadURL, to: localFileURL)
             
-            // Dosya boyutunu kontrol et
+            // Dosya bütünlüğünü kontrol et
             let attributes = try FileManager.default.attributesOfItem(atPath: localFileURL.path)
             let fileSize = attributes[.size] as? Int64 ?? 0
             print("🔍 DEBUG: Dosya kaydedildi - Boyut: \(fileSize) bytes")
             print("🔍 DEBUG: Dosya yolu: \(localFileURL.path)")
             
+            // Dosya boyutu kontrolü - minimum 1KB olmalı
+            if fileSize < 1024 {
+                print("❌ DEBUG: Dosya çok küçük, geçersiz video dosyası")
+                try? FileManager.default.removeItem(at: localFileURL)
+                completion(.failure(.fileSystemError(NSError(domain: "VideoDownloadService", code: 1, userInfo: [NSLocalizedDescriptionKey: "İndirilen dosya geçersiz"]))))
+                return
+            }
+            
+            // Dosya okunabilirliğini test et
+            let testData = try Data(contentsOf: localFileURL, options: .mappedIfSafe)
+            if testData.count < 1024 {
+                print("❌ DEBUG: Dosya okunamıyor veya çok küçük")
+                try? FileManager.default.removeItem(at: localFileURL)
+                completion(.failure(.fileSystemError(NSError(domain: "VideoDownloadService", code: 2, userInfo: [NSLocalizedDescriptionKey: "Video dosyası okunamıyor"]))))
+                return
+            }
+            
+            print("🔍 DEBUG: Dosya başarıyla kaydedildi ve doğrulandı")
             completion(.success(localFileURL))
         } catch {
             print("❌ DEBUG: Dosya kopyalama hatası: \(error)")
+            // Hata durumunda dosyayı temizle
+            try? FileManager.default.removeItem(at: localFileURL)
             completion(.failure(.fileSystemError(error)))
         }
     }

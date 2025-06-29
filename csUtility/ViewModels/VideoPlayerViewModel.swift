@@ -154,24 +154,65 @@ class VideoPlayerViewModel: ObservableObject {
                     let fileSize = attributes[.size] as? Int64 ?? 0
                     print("🔍 DEBUG: Dosya boyutu: \(fileSize) bytes")
                     
-                    if fileSize > 0 {
+                    // Dosya boyutu kontrolü - minimum 1KB olmalı
+                    if fileSize > 1024 {
                         canPlayLocalVideo = true
                         print("🔍 DEBUG: canPlayLocalVideo = true")
                     } else {
                         canPlayLocalVideo = false
-                        print("🔍 DEBUG: Dosya boş, canPlayLocalVideo = false")
+                        print("🔍 DEBUG: Dosya çok küçük, canPlayLocalVideo = false")
+                        // Çok küçük dosyaları temizle
+                        try? FileManager.default.removeItem(atPath: path)
+                        video.localVideoPath = nil
                     }
                 } catch {
                     print("🔍 DEBUG: Dosya özellikleri alınamadı: \(error)")
                     canPlayLocalVideo = false
+                    // Hatalı dosyaları temizle
+                    try? FileManager.default.removeItem(atPath: path)
+                    video.localVideoPath = nil
                 }
             } else {
                 canPlayLocalVideo = false
                 print("🔍 DEBUG: Dosya bulunamadı, canPlayLocalVideo = false")
+                // Bulunamayan dosyaları veritabanından temizle
+                video.localVideoPath = nil
             }
         } else {
             canPlayLocalVideo = false
             print("🔍 DEBUG: localVideoPath yok veya boş, canPlayLocalVideo = false")
+        }
+    }
+    
+    // Video dosyasının geçerli olup olmadığını kontrol et
+    func validateLocalVideoFile() -> Bool {
+        guard let path = video.localVideoPath, !path.isEmpty else {
+            return false
+        }
+        
+        let fileExists = FileManager.default.fileExists(atPath: path)
+        if !fileExists {
+            return false
+        }
+        
+        do {
+            let attributes = try FileManager.default.attributesOfItem(atPath: path)
+            let fileSize = attributes[.size] as? Int64 ?? 0
+            
+            // Dosya boyutu kontrolü
+            if fileSize < 1024 {
+                return false
+            }
+            
+            // Dosya uzantısı kontrolü
+            let fileExtension = path.lowercased()
+            if !fileExtension.hasSuffix(".mp4") && !fileExtension.hasSuffix(".mov") && !fileExtension.hasSuffix(".m4v") {
+                return false
+            }
+            
+            return true
+        } catch {
+            return false
         }
     }
 }

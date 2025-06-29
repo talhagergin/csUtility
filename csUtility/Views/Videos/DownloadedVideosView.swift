@@ -111,7 +111,7 @@ struct DownloadedVideosView: View {
             downloadedVideos = try modelContext.fetch(descriptor)
             print("🔍 DEBUG: İndirilmiş video sayısı: \(downloadedVideos.count)")
             
-            // Boş olmayan localVideoPath'leri filtrele
+            // Boş olmayan localVideoPath'leri filtrele ve geçersiz dosyaları temizle
             downloadedVideos = downloadedVideos.filter { video in
                 if let path = video.localVideoPath, !path.isEmpty {
                     // Dosyanın gerçekten var olup olmadığını kontrol et
@@ -119,10 +119,40 @@ struct DownloadedVideosView: View {
                     print("🔍 DEBUG: Video: \(video.title)")
                     print("🔍 DEBUG: - localVideoPath: \(path)")
                     print("🔍 DEBUG: - Dosya var mı: \(fileExists)")
-                    return fileExists
+                    
+                    if fileExists {
+                        // Dosya boyutunu kontrol et
+                        do {
+                            let attributes = try FileManager.default.attributesOfItem(atPath: path)
+                            let fileSize = attributes[.size] as? Int64 ?? 0
+                            print("🔍 DEBUG: - Dosya boyutu: \(fileSize) bytes")
+                            
+                            // Minimum 1KB boyut kontrolü
+                            if fileSize < 1024 {
+                                print("❌ DEBUG: Dosya çok küçük, temizleniyor")
+                                try? FileManager.default.removeItem(atPath: path)
+                                video.localVideoPath = nil
+                                return false
+                            }
+                            
+                            return true
+                        } catch {
+                            print("❌ DEBUG: Dosya özellikleri alınamadı, temizleniyor: \(error)")
+                            try? FileManager.default.removeItem(atPath: path)
+                            video.localVideoPath = nil
+                            return false
+                        }
+                    } else {
+                        print("❌ DEBUG: Dosya bulunamadı, veritabanından temizleniyor")
+                        video.localVideoPath = nil
+                        return false
+                    }
                 }
                 return false
             }
+            
+            // Değişiklikleri kaydet
+            try? modelContext.save()
             
             print("🔍 DEBUG: Filtrelenmiş video sayısı: \(downloadedVideos.count)")
             
